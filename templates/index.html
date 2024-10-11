@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webtoon Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, textarea {
+            display: block;
+            margin-bottom: 10px;
+            width: 300px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button.delete {
+            background-color: #d9534f;
+        }
+        #webtoonForms {
+            display: none; /* Hide webtoon management forms initially */
+        }
+        #webtoonDisplay {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Login</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+
+    <div id="webtoonForms">
+        <h1>Manage Webtoons</h1>
+
+        <!-- Form to add a new webtoon -->
+        <form id="addWebtoonForm">
+            <h3>Add Webtoon</h3>
+            <input type="text" id="title" placeholder="Title" required>
+            <textarea id="summary" placeholder="Summary" required></textarea>
+            <input type="text" id="characters" placeholder="Characters (comma separated)" required>
+            <button type="submit">Add Webtoon</button>
+        </form>
+
+        <!-- Form to delete a webtoon by ID -->
+        <form id="deleteWebtoonForm">
+            <h3>Delete Webtoon</h3>
+            <input type="text" id="deleteWebtoonId" placeholder="Enter Webtoon ID" required>
+            <button class="delete" type="submit">Delete Webtoon</button>
+        </form>
+
+        <!-- Form to fetch a webtoon by ID -->
+        <form id="getWebtoonForm">
+            <h3>Get Webtoon by ID</h3>
+            <input type="text" id="getWebtoonId" placeholder="Enter Webtoon ID" required>
+            <button type="submit">Get Webtoon</button>
+        </form>
+
+        <!-- Button to show all webtoons -->
+        <h3>Show All Webtoons</h3>
+        <button id="showAllWebtoons">Show All Webtoons</button>
+
+        <!-- Section to display webtoons -->
+        <div id="webtoonDisplay"></div>
+    </div>
+
+    <script>
+        // Function to handle adding a webtoon
+        document.getElementById('addWebtoonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const summary = document.getElementById('summary').value;
+            const characters = document.getElementById('characters').value.split(',');
+
+            const token = localStorage.getItem('token'); // Get the token from localStorage
+
+            fetch('/webtoons', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token // Use the token for authorization
+                },
+                body: JSON.stringify({ title, summary, characters })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err });
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Webtoon added successfully!');
+            })
+            .catch(error => {
+                if (error.errors) {
+                    alert('Error: ' + JSON.stringify(error.errors));
+                } else {
+                    alert('Error: ' + error.message);
+                }
+            });
+        });
+
+        // Function to handle deleting a webtoon
+        document.getElementById('deleteWebtoonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const webtoonId = document.getElementById('deleteWebtoonId').value;
+            const token = localStorage.getItem('token'); // Get the token from localStorage
+
+            fetch(`/webtoons/${webtoonId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token // Use the token for authorization
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    alert('Webtoon deleted successfully!');
+                    // Optionally, clear the delete form field
+                    document.getElementById('deleteWebtoonId').value = '';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Function to handle fetching a webtoon by ID
+        document.getElementById('getWebtoonForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const webtoonId = document.getElementById('getWebtoonId').value;
+            const token = localStorage.getItem('token'); // Get the token from localStorage
+
+            fetch(`/webtoons/${webtoonId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token // Use the token for authorization
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    displayWebtoon(data); // Display the fetched webtoon
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Function to handle fetching and displaying all webtoons
+        document.getElementById('showAllWebtoons').addEventListener('click', function() {
+            const token = localStorage.getItem('token'); // Get the token from localStorage
+
+            fetch('/webtoons', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token // Use the token for authorization
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayWebtoon(data); // Display all webtoons
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Function to display webtoons in the frontend
+        function displayWebtoon(data) {
+            const webtoonDisplay = document.getElementById('webtoonDisplay');
+            webtoonDisplay.innerHTML = ''; // Clear previous content
+
+            if (Array.isArray(data)) {
+                // If it's an array, display all webtoons
+                data.forEach(webtoon => {
+                    const webtoonDiv = document.createElement('div');
+                    webtoonDiv.innerHTML = `
+                        <h4>Title: ${webtoon.title}</h4>
+                        <p>Summary: ${webtoon.summary}</p>
+                        <p>Characters: ${webtoon.characters.join(', ')}</p>
+                        <hr>
+                    `;
+                    webtoonDisplay.appendChild(webtoonDiv);
+                });
+            } else {
+                // If it's a single webtoon, display it
+                webtoonDisplay.innerHTML = `
+                    <h4>Title: ${data.title}</h4>
+                    <p>Summary: ${data.summary}</p>
+                    <p>Characters: ${data.characters.join(', ')}</p>
+                `;
+            }
+        }
+
+        // Handle login
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Login failed');
+                }
+
+                const data = await response.json();
+                console.log('JWT Token:', data.access_token);
+
+                // Store the token in localStorage for future use
+                localStorage.setItem('token', data.access_token);
+
+                alert('Login successful! Token saved to localStorage');
+
+                // Show webtoon management forms
+                document.getElementById('webtoonForms').style.display = 'block';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
