@@ -105,7 +105,7 @@ curl -X DELETE http://localhost:5000/webtoons/delete/1   -H "Authorization: Bear
 - **Rate Limiting**: Prevents excessive requests to the API.
 - **Input Validation**: Ensures that the data provided to the API is correctly formatted.
 - **Caching**: For Reccuring similar requests to get more efficiency.
-- **Pging** : It can also be implemented in case of large data to ensure less data showing at one time.
+- **Paging** : It can also be implemented in case of large data to ensure less data showing at one time.
 
 ## Contributing
 Contributions are welcome! Please fork this repository and submit a pull request with your changes.
